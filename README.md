@@ -4,7 +4,7 @@
 
 ---
 
-## Table of Contents
+## Table of Content
 
 - [Features](#features)
 - [Screenshots](#screenshots)
@@ -45,9 +45,29 @@
 
 ## Screenshots
 
-_Coming soon._
+> Assume's the following alias in `~/.zshrc`
 
----
+`alias rto="/Users/mark.harris/go/bin/rto --data-dir ~/CODE/rto-data"`
+
+### FY 2026-Q1
+- ![rto screenshot](./media/FYQ1.png)
+
+### FY 2026-H1
+- ![rto screenshot](./media/FYH1.png)
+
+### FY2026
+  - ![rto screenshot](./media/FY.png)
+
+### CAL 2026-Q1
+- ![rto screenshot](./media/CALQ1.png)
+
+### CAL 2026-H1
+- ![rto screenshot](./media/CALH1.png)
+
+### CAL 2026
+  - ![rto screenshot](./media/CAL.png)
+
+  ---
 
 ## Installation
 
