@@ -7,12 +7,13 @@ import (
 
 	"rto/data"
 
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
-func (m *AppModel) View() string {
+func (m *AppModel) View() tea.View {
 	if m.termWidth == 0 {
-		return "Initializing..."
+		return tea.NewView("Initializing...")
 	}
 
 	mainContent := ""
@@ -36,7 +37,25 @@ func (m *AppModel) View() string {
 		mainContent += "\n" + statusStyle.Render(m.statusMsg)
 	}
 
-	return mainContent
+	v := tea.NewView(mainContent)
+	v.WindowTitle = m.windowTitle()
+	return v
+}
+
+func (m *AppModel) windowTitle() string {
+	base := "RTO Tracker"
+	switch m.currentView {
+	case ViewVacations:
+		return base + " — Vacations"
+	case ViewHolidays:
+		return base + " — Holidays"
+	case ViewSettings:
+		return base + " — Settings"
+	}
+	if m.isWhatIf() {
+		return base + " — What-If"
+	}
+	return base
 }
 
 func (m *AppModel) renderCalendar() string {
@@ -176,8 +195,9 @@ func (m *AppModel) drawMonth(
 		_, isVacation := vacations[key]
 		_, hasEvent := events[key]
 
-		style := calendarDayStyle(isSelected, isBadged, isFlexCredit, isHoliday || isVacation, isToday, isWeekend, hasEvent)
-		days = append(days, style.Render(fmt.Sprintf("%2d", day)))
+		style := calendarDayStyle(isSelected, isBadged, isFlexCredit, isHoliday || isVacation, isToday, isWeekend, hasEvent).
+			Width(2).Align(lipgloss.Right)
+		days = append(days, style.Render(fmt.Sprintf("%d", day)))
 	}
 
 	// Create rows

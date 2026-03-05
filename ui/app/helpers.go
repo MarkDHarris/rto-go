@@ -3,7 +3,7 @@ package app
 import (
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // ── Style Helpers ────────────────────────────────────────────────────────────
@@ -12,11 +12,6 @@ func calendarDayStyle(selected, badged, flex, holidayVac, today, weekend, hasEve
 	style := lipgloss.NewStyle()
 
 	switch {
-	case selected:
-		style = style.Background(lipgloss.Color("15")).Foreground(lipgloss.Color("0")).Bold(true)
-		if today {
-			style = style.Underline(true)
-		}
 	case badged && flex:
 		style = style.Foreground(lipgloss.Color("172")).Bold(true)
 	case badged:
@@ -24,13 +19,21 @@ func calendarDayStyle(selected, badged, flex, holidayVac, today, weekend, hasEve
 	case holidayVac:
 		style = style.Foreground(lipgloss.Color("2"))
 	case today:
-		style = style.Bold(true).Underline(true)
+		style = style.Bold(true)
 	case weekend:
 		style = style.Foreground(lipgloss.Color("240"))
 	}
 
-	if hasEvent && !selected {
+	if hasEvent {
 		style = style.Foreground(lipgloss.Color("226"))
+	}
+
+	if today {
+		style = style.Underline(true)
+	}
+
+	if selected {
+		style = style.Reverse(true)
 	}
 
 	return style

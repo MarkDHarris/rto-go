@@ -6,12 +6,12 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"rto/backup"
 	"rto/data"
 )
 
-func (m *AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *AppModel) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	m.statusMsg = ""
 
 	switch m.currentView {
@@ -27,7 +27,7 @@ func (m *AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *AppModel) handleCalendarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *AppModel) handleCalendarKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.mode == ModeAdd {
 		return m.handleAddEventKey(msg)
 	}
@@ -38,97 +38,93 @@ func (m *AppModel) handleCalendarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleSearchKey(msg)
 	}
 
-	switch msg.Type {
-	case tea.KeyCtrlC:
+	switch msg.String() {
+	case "ctrl+c":
 		return m, tea.Quit
-	case tea.KeyRunes:
-		switch string(msg.Runes) {
-		case "q":
-			if m.isWhatIf() {
-				m.exitWhatIf()
-				return m, nil
-			}
-			return m, tea.Quit
-		case "b":
-			m.toggleBadge()
+	case "q":
+		if m.isWhatIf() {
+			m.exitWhatIf()
 			return m, nil
-		case "f":
-			m.toggleFlex()
-			return m, nil
-		case "g":
-			m.gitBackup()
-			return m, nil
-		case "w":
-			if m.isWhatIf() {
-				m.exitWhatIf()
-			} else {
-				m.enterWhatIf()
-			}
-			return m, nil
-		case "n":
-			m.navigateToAdjacentPeriod(1)
-			return m, nil
-		case "p":
-			m.navigateToAdjacentPeriod(-1)
-			return m, nil
-		case "a":
-			m.mode = ModeAdd
-			m.inputBuffer = ""
-			m.formCursor = 0
-		case "d":
-			m.mode = ModeDelete
-			m.inputBuffer = ""
-			m.formCursor = 0
-		case "s":
-			m.mode = ModeSearch
-			m.inputBuffer = ""
-			m.formCursor = 0
-			// m.searchResults = nil
-		case "v":
-			m.currentView = ViewVacations
-			m.listCursor = 0
-			m.mode = ModeNormal
-		case "h":
-			m.currentView = ViewHolidays
-			m.listCursor = 0
-			m.mode = ModeNormal
-		case "o":
-			m.currentView = ViewSettings
-			m.listCursor = 0
-			m.mode = ModeNormal
-		case "y":
-			// Toggle year stats view (rendered in calendar view already)
 		}
-	case tea.KeySpace:
+		return m, tea.Quit
+	case "b":
+		m.toggleBadge()
+		return m, nil
+	case "f":
+		m.toggleFlex()
+		return m, nil
+	case "g":
+		m.gitBackup()
+		return m, nil
+	case "w":
+		if m.isWhatIf() {
+			m.exitWhatIf()
+		} else {
+			m.enterWhatIf()
+		}
+		return m, nil
+	case "n":
+		m.navigateToAdjacentPeriod(1)
+		return m, nil
+	case "p":
+		m.navigateToAdjacentPeriod(-1)
+		return m, nil
+	case "a":
+		m.mode = ModeAdd
+		m.inputBuffer = ""
+		m.formCursor = 0
+	case "d":
+		m.mode = ModeDelete
+		m.inputBuffer = ""
+		m.formCursor = 0
+	case "s":
+		m.mode = ModeSearch
+		m.inputBuffer = ""
+		m.formCursor = 0
+	case "v":
+		m.currentView = ViewVacations
+		m.listCursor = 0
+		m.mode = ModeNormal
+	case "h":
+		m.currentView = ViewHolidays
+		m.listCursor = 0
+		m.mode = ModeNormal
+	case "o":
+		m.currentView = ViewSettings
+		m.listCursor = 0
+		m.mode = ModeNormal
+	case "y":
+		// Toggle year stats view (rendered in calendar view already)
+	case "space":
 		m.switchTimePeriodView(1)
 		return m, nil
-	case tea.KeyShiftRight:
+	case "shift+right":
 		m.switchTimePeriodView(1)
 		return m, nil
-	case tea.KeyShiftLeft:
+	case "shift+left":
 		m.switchTimePeriodView(-1)
 		return m, nil
-	case tea.KeyRight:
+	case "right":
 		m.selectedDate = m.selectedDate.AddDate(0, 0, 1)
 		m.ensureNavFollowsDate()
-	case tea.KeyLeft:
+	case "left":
 		m.selectedDate = m.selectedDate.AddDate(0, 0, -1)
 		m.ensureNavFollowsDate()
-	case tea.KeyDown:
+	case "down":
 		m.selectedDate = m.selectedDate.AddDate(0, 0, 7)
 		m.ensureNavFollowsDate()
-	case tea.KeyUp:
+	case "up":
 		m.selectedDate = m.selectedDate.AddDate(0, 0, -7)
 		m.ensureNavFollowsDate()
 	}
 	return m, nil
 }
 
-func (m *AppModel) handleAddEventKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEsc:
+func (m *AppModel) handleAddEventKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
 		m.mode = ModeNormal
-	case tea.KeyEnter:
+	case "enter":
 		if strings.TrimSpace(m.inputBuffer) != "" {
 			m.eventData.Add(data.Event{
 				Date:        m.selectedDate.Format("2006-01-02"),
@@ -138,35 +134,35 @@ func (m *AppModel) handleAddEventKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.mode = ModeNormal
 		m.inputBuffer = ""
-	case tea.KeyBackspace:
+	case "backspace":
 		if m.formCursor > 0 {
 			runes := []rune(m.inputBuffer)
 			m.inputBuffer = string(runes[:m.formCursor-1]) + string(runes[m.formCursor:])
 			m.formCursor--
 		}
-	case tea.KeyLeft:
+	case "left":
 		if m.formCursor > 0 {
 			m.formCursor--
 		}
-	case tea.KeyRight:
+	case "right":
 		if m.formCursor < len(m.inputBuffer) {
 			m.formCursor++
 		}
-	case tea.KeySpace:
-		m.insertRune(' ')
-	case tea.KeyRunes:
-		runes := []rune(m.inputBuffer)
-		m.inputBuffer = string(runes[:m.formCursor]) + string(msg.Runes) + string(runes[m.formCursor:])
-		m.formCursor++
+	default:
+		if msg.Text != "" {
+			runes := []rune(m.inputBuffer)
+			m.inputBuffer = string(runes[:m.formCursor]) + msg.Text + string(runes[m.formCursor:])
+			m.formCursor += len([]rune(msg.Text))
+		}
 	}
 	return m, nil
 }
 
-func (m *AppModel) handleDeleteEventKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEsc:
+func (m *AppModel) handleDeleteEventKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
 		m.mode = ModeNormal
-	case tea.KeyEnter:
+	case "enter":
 		if strings.TrimSpace(m.inputBuffer) != "" {
 			m.eventData.Remove(
 				m.selectedDate.Format("2006-01-02"),
@@ -176,48 +172,45 @@ func (m *AppModel) handleDeleteEventKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.mode = ModeNormal
 		m.inputBuffer = ""
-	case tea.KeyBackspace:
+	case "backspace":
 		if m.formCursor > 0 {
 			runes := []rune(m.inputBuffer)
 			m.inputBuffer = string(runes[:m.formCursor-1]) + string(runes[m.formCursor:])
 			m.formCursor--
 		}
-	case tea.KeySpace:
-		m.insertRune(' ')
-	case tea.KeyRunes:
-		runes := []rune(m.inputBuffer)
-		m.inputBuffer = string(runes[:m.formCursor]) + string(msg.Runes) + string(runes[m.formCursor:])
-		m.formCursor++
+	default:
+		if msg.Text != "" {
+			runes := []rune(m.inputBuffer)
+			m.inputBuffer = string(runes[:m.formCursor]) + msg.Text + string(runes[m.formCursor:])
+			m.formCursor += len([]rune(msg.Text))
+		}
 	}
 	return m, nil
 }
 
-func (m *AppModel) handleSearchKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEsc:
+func (m *AppModel) handleSearchKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
 		m.mode = ModeNormal
-		// m.searchResults = nil
-	case tea.KeyEnter:
+	case "enter":
 		// m.searchResults = searchEvents(m.eventData.All(), m.inputBuffer)
-	case tea.KeyBackspace:
+	case "backspace":
 		if m.formCursor > 0 {
 			runes := []rune(m.inputBuffer)
 			m.inputBuffer = string(runes[:m.formCursor-1]) + string(runes[m.formCursor:])
 			m.formCursor--
-			// m.searchResults = searchEvents(m.eventData.All(), m.inputBuffer)
 		}
-	case tea.KeySpace:
-		m.insertRune(' ')
-	case tea.KeyRunes:
-		runes := []rune(m.inputBuffer)
-		m.inputBuffer = string(runes[:m.formCursor]) + string(msg.Runes) + string(runes[m.formCursor:])
-		m.formCursor++
-		// m.searchResults = searchEvents(m.eventData.All(), m.inputBuffer)
+	default:
+		if msg.Text != "" {
+			runes := []rune(m.inputBuffer)
+			m.inputBuffer = string(runes[:m.formCursor]) + msg.Text + string(runes[m.formCursor:])
+			m.formCursor += len([]rune(msg.Text))
+		}
 	}
 	return m, nil
 }
 
-func (m *AppModel) handleVacationsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *AppModel) handleVacationsKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch m.mode {
 	case ModeNormal:
 		return m.handleVacationsNormal(msg)
@@ -227,47 +220,16 @@ func (m *AppModel) handleVacationsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *AppModel) handleVacationsNormal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *AppModel) handleVacationsNormal(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	all := m.vacationData.All()
-	switch msg.Type {
-	case tea.KeyRunes:
-		switch string(msg.Runes) {
-		case "q":
-			m.currentView = ViewCalendar
-		case "a":
-			m.mode = ModeAdd
-			m.formCursor = 0
-			m.formInputs = []string{"", "", "", ""}
-		case "e":
-			if len(all) > 0 {
-				v := all[m.listCursor]
-				approved := "n"
-				if v.Approved {
-					approved = "y"
-				}
-				m.mode = ModeEdit
-				m.formCursor = 0
-				m.formInputs = []string{v.Destination, v.StartDate, v.EndDate, approved}
-			}
-		case "x":
-			if len(all) > 0 {
-				v := all[m.listCursor]
-				m.vacationData.Remove(v.StartDate, v.EndDate)
-				m.markDirty()
-				if m.listCursor >= m.vacationData.Len() && m.listCursor > 0 {
-					m.listCursor--
-				}
-			}
-		}
-	case tea.KeyDown:
-		if m.listCursor < len(all)-1 {
-			m.listCursor++
-		}
-	case tea.KeyUp:
-		if m.listCursor > 0 {
-			m.listCursor--
-		}
-	case tea.KeyEnter:
+	switch msg.String() {
+	case "q":
+		m.currentView = ViewCalendar
+	case "a":
+		m.mode = ModeAdd
+		m.formCursor = 0
+		m.formInputs = []string{"", "", "", ""}
+	case "e", "enter":
 		if len(all) > 0 {
 			v := all[m.listCursor]
 			approved := "n"
@@ -278,17 +240,34 @@ func (m *AppModel) handleVacationsNormal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.formCursor = 0
 			m.formInputs = []string{v.Destination, v.StartDate, v.EndDate, approved}
 		}
+	case "x":
+		if len(all) > 0 {
+			v := all[m.listCursor]
+			m.vacationData.Remove(v.StartDate, v.EndDate)
+			m.markDirty()
+			if m.listCursor >= m.vacationData.Len() && m.listCursor > 0 {
+				m.listCursor--
+			}
+		}
+	case "down":
+		if m.listCursor < len(all)-1 {
+			m.listCursor++
+		}
+	case "up":
+		if m.listCursor > 0 {
+			m.listCursor--
+		}
 	}
 
 	return m, nil
 }
 
-func (m *AppModel) handleVacationsForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEsc:
+func (m *AppModel) handleVacationsForm(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
 		m.mode = ModeNormal
 		m.formInputs = nil
-	case tea.KeyEnter:
+	case "enter":
 		if m.formCursor < len(m.formInputs)-1 {
 			m.formCursor++
 		} else {
@@ -312,24 +291,24 @@ func (m *AppModel) handleVacationsForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.formInputs = nil
 			m.recalculateStats()
 		}
-	case tea.KeyBackspace:
+	case "backspace":
 		if len(m.formInputs[m.formCursor]) > 0 {
 			runes := []rune(m.formInputs[m.formCursor])
 			m.formInputs[m.formCursor] = string(runes[:len(runes)-1])
 		}
-	case tea.KeyTab:
+	case "tab":
 		if m.formCursor < len(m.formInputs)-1 {
 			m.formCursor++
 		}
-	case tea.KeySpace:
-		m.insertFormRune(' ')
-	case tea.KeyRunes:
-		m.formInputs[m.formCursor] += string(msg.Runes)
+	default:
+		if msg.Text != "" {
+			m.formInputs[m.formCursor] += msg.Text
+		}
 	}
 	return m, nil
 }
 
-func (m *AppModel) handleHolidaysKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *AppModel) handleHolidaysKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch m.mode {
 	case ModeNormal:
 		return m.handleHolidaysNormal(msg)
@@ -339,71 +318,60 @@ func (m *AppModel) handleHolidaysKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *AppModel) handleHolidaysNormal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *AppModel) handleHolidaysNormal(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	all := m.holidayData.All()
-	switch msg.Type {
-	case tea.KeyRunes:
-		switch string(msg.Runes) {
-		case "q":
-			m.currentView = ViewCalendar
-		case "a":
-			m.mode = ModeAdd
-			m.formCursor = 0
-			m.formInputs = []string{"", ""}
-		case "e":
-			if len(all) > 0 {
-				h := all[m.listCursor]
-				m.mode = ModeEdit
-				m.formCursor = 0
-				m.formInputs = []string{h.Date, h.Name}
-			}
-		case "x":
-			if len(all) > 0 {
-				h := all[m.listCursor]
-				newHD := data.NewHolidayData()
-				for _, existing := range all {
-					if existing.Date == h.Date && existing.Name == h.Name {
-						continue
-					}
-					newHD.Add(existing)
-				}
-				*m.holidayData = *newHD
-				m.markDirty()
-				if m.listCursor >= m.holidayData.Len() && m.listCursor > 0 {
-					m.listCursor--
-				}
-				m.recalculateStats()
-			}
-		}
-	case tea.KeyDown:
-		if m.listCursor < len(all)-1 {
-			m.listCursor++
-		}
-	case tea.KeyUp:
-		if m.listCursor > 0 {
-			m.listCursor--
-		}
-	case tea.KeyEnter:
+	switch msg.String() {
+	case "q":
+		m.currentView = ViewCalendar
+	case "a":
+		m.mode = ModeAdd
+		m.formCursor = 0
+		m.formInputs = []string{"", ""}
+	case "e", "enter":
 		if len(all) > 0 {
 			h := all[m.listCursor]
 			m.mode = ModeEdit
 			m.formCursor = 0
 			m.formInputs = []string{h.Date, h.Name}
 		}
+	case "x":
+		if len(all) > 0 {
+			h := all[m.listCursor]
+			newHD := data.NewHolidayData()
+			for _, existing := range all {
+				if existing.Date == h.Date && existing.Name == h.Name {
+					continue
+				}
+				newHD.Add(existing)
+			}
+			*m.holidayData = *newHD
+			m.markDirty()
+			if m.listCursor >= m.holidayData.Len() && m.listCursor > 0 {
+				m.listCursor--
+			}
+			m.recalculateStats()
+		}
+	case "down":
+		if m.listCursor < len(all)-1 {
+			m.listCursor++
+		}
+	case "up":
+		if m.listCursor > 0 {
+			m.listCursor--
+		}
 	}
 	return m, nil
 }
 
-func (m *AppModel) handleHolidaysForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEsc:
+func (m *AppModel) handleHolidaysForm(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
 		m.mode = ModeNormal
 		m.formInputs = nil
-	case tea.KeyEnter:
+	case "enter":
 		if m.formCursor < len(m.formInputs)-1 {
 			m.formCursor++
 		} else {
-			// Commit
 			newH := data.Holiday{
 				Date: strings.TrimSpace(m.formInputs[0]),
 				Name: strings.TrimSpace(m.formInputs[1]),
@@ -428,24 +396,24 @@ func (m *AppModel) handleHolidaysForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.formInputs = nil
 			m.recalculateStats()
 		}
-	case tea.KeyBackspace:
+	case "backspace":
 		if len(m.formInputs[m.formCursor]) > 0 {
 			runes := []rune(m.formInputs[m.formCursor])
 			m.formInputs[m.formCursor] = string(runes[:len(runes)-1])
 		}
-	case tea.KeyTab:
+	case "tab":
 		if m.formCursor < len(m.formInputs)-1 {
 			m.formCursor++
 		}
-	case tea.KeySpace:
-		m.insertFormRune(' ')
-	case tea.KeyRunes:
-		m.formInputs[m.formCursor] += string(msg.Runes)
+	default:
+		if msg.Text != "" {
+			m.formInputs[m.formCursor] += msg.Text
+		}
 	}
 	return m, nil
 }
 
-func (m *AppModel) handleSettingsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *AppModel) handleSettingsKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch m.mode {
 	case ModeNormal:
 		return m.handleSettingsNormal(msg)
@@ -455,33 +423,11 @@ func (m *AppModel) handleSettingsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *AppModel) handleSettingsNormal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyRunes:
-		switch string(msg.Runes) {
-		case "q":
-			m.currentView = ViewCalendar
-		case "e":
-			m.mode = ModeEdit
-			switch m.listCursor {
-			case 0:
-				m.inputBuffer = m.settings.DefaultOffice
-			case 1:
-				m.inputBuffer = m.settings.FlexCredit
-			case 2:
-				m.inputBuffer = fmt.Sprintf("%d", m.settings.Goal)
-			}
-			m.formCursor = len(m.inputBuffer)
-		}
-	case tea.KeyDown:
-		if m.listCursor < 2 {
-			m.listCursor++
-		}
-	case tea.KeyUp:
-		if m.listCursor > 0 {
-			m.listCursor--
-		}
-	case tea.KeyEnter:
+func (m *AppModel) handleSettingsNormal(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "q":
+		m.currentView = ViewCalendar
+	case "e", "enter":
 		m.mode = ModeEdit
 		switch m.listCursor {
 		case 0:
@@ -492,15 +438,23 @@ func (m *AppModel) handleSettingsNormal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.inputBuffer = fmt.Sprintf("%d", m.settings.Goal)
 		}
 		m.formCursor = len(m.inputBuffer)
+	case "down":
+		if m.listCursor < 2 {
+			m.listCursor++
+		}
+	case "up":
+		if m.listCursor > 0 {
+			m.listCursor--
+		}
 	}
 	return m, nil
 }
 
-func (m *AppModel) handleSettingsEdit(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEsc:
+func (m *AppModel) handleSettingsEdit(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
 		m.mode = ModeNormal
-	case tea.KeyEnter:
+	case "enter":
 		switch m.listCursor {
 		case 0:
 			m.settings.DefaultOffice = strings.TrimSpace(m.inputBuffer)
@@ -514,38 +468,28 @@ func (m *AppModel) handleSettingsEdit(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.markDirty()
 		m.mode = ModeNormal
-	case tea.KeyBackspace:
+	case "backspace":
 		if m.formCursor > 0 {
 			runes := []rune(m.inputBuffer)
 			m.inputBuffer = string(runes[:m.formCursor-1]) + string(runes[m.formCursor:])
 			m.formCursor--
 		}
-	case tea.KeyLeft:
+	case "left":
 		if m.formCursor > 0 {
 			m.formCursor--
 		}
-	case tea.KeyRight:
+	case "right":
 		if m.formCursor < len(m.inputBuffer) {
 			m.formCursor++
 		}
-	case tea.KeySpace:
-		m.insertRune(' ')
-	case tea.KeyRunes:
-		runes := []rune(m.inputBuffer)
-		m.inputBuffer = string(runes[:m.formCursor]) + string(msg.Runes) + string(runes[m.formCursor:])
-		m.formCursor++
+	default:
+		if msg.Text != "" {
+			runes := []rune(m.inputBuffer)
+			m.inputBuffer = string(runes[:m.formCursor]) + msg.Text + string(runes[m.formCursor:])
+			m.formCursor += len([]rune(msg.Text))
+		}
 	}
 	return m, nil
-}
-
-func (m *AppModel) insertRune(r rune) {
-	runes := []rune(m.inputBuffer)
-	m.inputBuffer = string(runes[:m.formCursor]) + string(r) + string(runes[m.formCursor:])
-	m.formCursor++
-}
-
-func (m *AppModel) insertFormRune(r rune) {
-	m.formInputs[m.formCursor] += string(r)
 }
 
 //

@@ -1,10 +1,12 @@
 package data
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -103,14 +105,106 @@ func SaveYAML(filename string, v interface{}) error {
 }
 
 // SaveYAMLTo serializes v as YAML and writes to a file in the given directory.
+// String values (but not mapping keys) are always double-quoted so the output
+// matches the hand-written style used for holidays, vacations, and settings.
 func SaveYAMLTo(dir, filename string, v interface{}) error {
 	path := filepath.Join(dir, filename)
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return fmt.Errorf("creating directories for %s: %w", path, err)
 	}
-	data, err := yaml.Marshal(v)
-	if err != nil {
+
+	var node yaml.Node
+	if err := node.Encode(v); err != nil {
+		return fmt.Errorf("encoding YAML for %s: %w", filename, err)
+	}
+	quoteStringValues(&node)
+
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(&node); err != nil {
 		return fmt.Errorf("marshaling YAML for %s: %w", filename, err)
 	}
-	return os.WriteFile(path, data, 0644)
+	if err := enc.Close(); err != nil {
+		return fmt.Errorf("finalizing YAML for %s: %w", filename, err)
+	}
+
+	return os.WriteFile(path, dedentSequences(buf.Bytes(), 2), 0644)
+}
+
+// dedentSequences removes the extra indentation that yaml.Encoder adds to
+// sequence items, so that `- ` sits at the same column as its parent key
+// (style #1) rather than indented under it (style #2).
+func dedentSequences(data []byte, indentSize int) []byte {
+	lines := strings.Split(string(data), "\n")
+	result := make([]string, 0, len(lines))
+	inSeq := false
+	seqParentIndent := 0
+
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
+		trimmed := strings.TrimSpace(line)
+
+		if trimmed == "" {
+			result = append(result, line)
+			continue
+		}
+
+		indent := len(line) - len(strings.TrimLeft(line, " "))
+
+		if inSeq && indent <= seqParentIndent {
+			inSeq = false
+		}
+
+		if inSeq && indent >= indentSize {
+			line = line[indentSize:]
+		}
+
+		result = append(result, line)
+
+		if strings.HasSuffix(trimmed, ":") && !inSeq {
+			for j := i + 1; j < len(lines); j++ {
+				nextTrimmed := strings.TrimSpace(lines[j])
+				if nextTrimmed == "" {
+					continue
+				}
+				if strings.HasPrefix(nextTrimmed, "- ") {
+					inSeq = true
+					seqParentIndent = indent
+				}
+				break
+			}
+		}
+	}
+
+	return []byte(strings.Join(result, "\n"))
+}
+
+// quoteStringValues walks a yaml.Node tree and sets DoubleQuotedStyle on
+// every string scalar that appears as a mapping value or sequence item,
+// leaving mapping keys unquoted.
+func quoteStringValues(node *yaml.Node) {
+	switch node.Kind {
+	case yaml.DocumentNode:
+		for _, child := range node.Content {
+			quoteStringValues(child)
+		}
+	case yaml.MappingNode:
+		for i := 0; i < len(node.Content)-1; i += 2 {
+			val := node.Content[i+1]
+			if val.Kind == yaml.ScalarNode && val.Tag == "!!str" {
+				val.Style = yaml.DoubleQuotedStyle
+			} else {
+				quoteStringValues(val)
+			}
+		}
+	case yaml.SequenceNode:
+		for _, child := range node.Content {
+			if child.Kind == yaml.ScalarNode && child.Tag == "!!str" {
+				child.Style = yaml.DoubleQuotedStyle
+			} else {
+				quoteStringValues(child)
+			}
+		}
+	}
 }
